@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, field_validator
 
-app = FastAPI(title="AI Personal Nutritionist API") # Create a FAstAPI object with a title
+# Create a FAstAPI object with a title
+app = FastAPI(title="AI Personal Nutritionist API") 
 
-
+# Defines the expected structure of the nutrition profile JSON
 class NutritionProfileInput(BaseModel):
     age: int
     gender: str
@@ -15,6 +16,15 @@ class NutritionProfileInput(BaseModel):
     daily_activity: str
     goal: str
 
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, value: str) -> str:
+        valid_genders = {"male", "female"}
+        if value.lower() not in valid_genders:
+            raise ValueError("gender must be 'male' or 'female'")
+        return value.lower()
+
+    # Validate several fields using the same rule
     @field_validator("age", "weight_kg", "height_cm")
     @classmethod
     def must_be_positive(cls, value: float) -> float:
@@ -39,7 +49,20 @@ class NutritionProfileInput(BaseModel):
 
 @app.post("/nutrition/profile")
 def create_nutrition_profile(profile: NutritionProfileInput):
+    # Convert the validated Pydantic object to a Python dict
     return profile.model_dump()
+
+
+def calculate_bmr(profile: NutritionProfileInput) -> float:
+    if profile.gender == "male":
+        return 10 * profile.weight_kg + 6.25 * profile.height_cm - 5 * profile.age + 5
+    return 10 * profile.weight_kg + 6.25 * profile.height_cm - 5 * profile.age - 161
+
+
+@app.post("/nutrition/bmr")
+def get_bmr(profile: NutritionProfileInput):
+    bmr = calculate_bmr(profile)
+    return {"bmr": bmr}
 
 
 @app.get("/") # Handle GET requests to the root path "/"
