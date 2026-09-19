@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 # Defines the expected structure of the nutrition profile JSON
@@ -11,8 +11,8 @@ class NutritionProfileInput(BaseModel):
     height_cm: float
     workouts_per_week: int
     avg_workout_minutes: int
-    workout_intensity: str
-    daily_activity: str
+    workout_intensity: Literal["low", "moderate", "high"]
+    daily_activity: Literal["sedentary", "lightly_active", "active", "very_active"]
     goal: str
 
     # Validate several fields using the same rule
@@ -36,6 +36,12 @@ class NutritionProfileInput(BaseModel):
         if value < 0:
             raise ValueError("cannot be negative")
         return value
+
+    @model_validator(mode="after")
+    def validate_workout_minutes_for_active_schedule(self):
+        if self.workouts_per_week > 0 and self.avg_workout_minutes <= 0:
+            raise ValueError("avg_workout_minutes must be greater than 0 when workouts_per_week is greater than 0")
+        return self
 
 
 class WorkoutInput(BaseModel):
