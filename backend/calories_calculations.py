@@ -1,8 +1,9 @@
 from models import NutritionProfileInput, WorkoutInput
 
 
-# MET values are kept explicit so they are easy to adjust later.
-# MET - measures how much energy an activity uses compared to resting.
+
+#  Measures how much energy an activity uses compared to resting.
+# MET - Metabolic Equivalent of Task
 RESISTANCE_TRAINING_MET = {
     "low": 3.5,
     "moderate": 5.0,
@@ -19,7 +20,8 @@ BASELINE_ACTIVITY_FACTORS = {
     "very_active": 1.9,
 }
 
-
+# Calculate BMR using the Mifflin-St Jeor equation.
+# BMR - Basal Metabolic Rate
 def calculate_bmr(profile: NutritionProfileInput) -> float:
     if profile.gender == "male":
         return 10 * profile.weight_kg + 6.25 * profile.height_cm - 5 * profile.age + 5
@@ -34,14 +36,15 @@ def calculate_workout_calories(weight_kg: float, workout: WorkoutInput) -> float
     # The total is the per-minute burn multiplied by the workout length.
     return kcal_per_minute * workout.duration_minutes
 
-
+# Calculate baseline daily calories based on BMR and lifestyle factor.
 def calculate_baseline_daily_calories(profile: NutritionProfileInput) -> float:
     # Start with BMR, then scale by the selected lifestyle factor.
     bmr = calculate_bmr(profile)
     activity_factor = BASELINE_ACTIVITY_FACTORS[profile.daily_activity]
     return bmr * activity_factor
 
-
+# Calculate the average daily net calories burned from workouts
+# EAT - Exercise Activity Thermogenesis
 def calculate_average_daily_net_workout_calories(
     weight_kg: float,
     workout: WorkoutInput,
@@ -93,8 +96,22 @@ def calculate_adjusted_daily_workout_calories(profile: NutritionProfileInput) ->
     # Return net exercise calories after accounting for the overlap with baseline activity.
     return net_eat - replaced_baseline_activity
 
-
+# Calculate TDEE by summing baseline daily calories and adjusted daily workout calories.
+# TDEE - Total Daily Energy Expenditure
 def calculate_tdee(profile: NutritionProfileInput) -> float:
     baseline = calculate_baseline_daily_calories(profile)
     adjusted_eat = calculate_adjusted_daily_workout_calories(profile)
     return baseline + adjusted_eat
+
+# Calculate daily calorie target based on TDEE and the user's goal.
+def calculate_daily_calorie_target(profile: NutritionProfileInput) -> int:
+
+    tdee = calculate_tdee(profile)
+    if profile.goal == "maintain":
+        return round(tdee)
+    elif profile.goal == "bulk":
+        return round(tdee + 300)
+    elif profile.goal == "cut":
+        return round(tdee - 300)
+    else:
+        raise ValueError("Invalid goal: must be 'maintain', 'bulk', or 'cut'")

@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 
-from calculations import calculate_tdee, calculate_workout_calories
+from calories_calculations import (
+    calculate_bmr,
+    calculate_tdee,
+    calculate_workout_calories,
+    calculate_daily_calorie_target,
+)
+
 from models import NutritionProfileInput, WorkoutCaloriesRequest
 
 # Create a FastAPI object with a title
@@ -15,7 +21,6 @@ def create_nutrition_profile(profile: NutritionProfileInput):
 
 @app.post("/nutrition/bmr")
 def get_bmr(profile: NutritionProfileInput):
-    from calculations import calculate_bmr
 
     bmr = calculate_bmr(profile)
     return {"bmr": bmr}
@@ -38,4 +43,10 @@ def get_tdee(profile: NutritionProfileInput):
 def read_root():
     return {"message": "API is running"}
 
+@app.post("/nutrition/daily-goal-calories")
+def get_daily_goal_calories(profile: NutritionProfileInput):
+
+    daily_goal_calories = calculate_daily_calorie_target(profile)
+
+    return {"daily_goal_calories": daily_goal_calories}
 

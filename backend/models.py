@@ -13,7 +13,7 @@ class NutritionProfileInput(BaseModel):
     avg_workout_minutes: int
     workout_intensity: Literal["low", "moderate", "high"]
     daily_activity: Literal["sedentary", "lightly_active", "active", "very_active"]
-    goal: str
+    goal: Literal["maintain", "bulk", "cut"]
 
     # Validate several fields using the same rule
     @field_validator("age", "weight_kg", "height_cm")
