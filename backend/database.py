@@ -17,4 +17,15 @@ engine = create_engine(DATABASE_URL)
 # every time you call SessionLocal(), it will create a new session connected to the database.
 SessionLocal = sessionmaker(bind=engine)
 
-
+# Dependency function to get a database session.
+# This function can be used in FastAPI endpoints to provide a database session.
+def get_db():
+    # Create a new database session for the request.
+    db = SessionLocal()
+    try:
+        # Return the session to the caller without closing it.
+        # This allows to close the session after the endpoint function has finished executing.
+        yield db
+    finally:
+        # Close the session to free up resources.
+        db.close()

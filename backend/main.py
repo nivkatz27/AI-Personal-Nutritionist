@@ -1,4 +1,14 @@
 from fastapi import FastAPI
+from fastapi import Depends, HTTPException
+
+## SQLAlchemy database session type used by the database dependency.
+from sqlalchemy.orm import Session
+
+# Import the function that creates a database session for each request.
+from database import get_db
+# Import the orm model NutritionProfile for database operations.
+from db_models import NutritionProfile
+
 
 from calories_calculations import (
     calculate_bmr,
@@ -50,3 +60,32 @@ def get_daily_goal_calories(profile: NutritionProfileInput):
 
     return {"daily_goal_calories": daily_goal_calories}
 
+
+# Retrieve a nutrition profile from the database using its ID.
+# Return 404 if no profile with that ID exists.
+@app.get("/nutrition/profiles/{profile_id}")
+def get_nutrition_profile(
+    profile_id: int,
+    db: Session = Depends(get_db),
+):
+    profile = db.get(NutritionProfile, profile_id)
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Nutrition profile not found"
+        )
+
+    return {
+        "id": profile.id,
+        "age": profile.age,
+        "gender": profile.gender,
+        "weight_kg": profile.weight_kg,
+        "height_cm": profile.height_cm,
+        "workouts_per_week": profile.workouts_per_week,
+        "avg_workout_minutes": profile.avg_workout_minutes,
+        "workout_intensity": profile.workout_intensity,
+        "daily_activity": profile.daily_activity,
+        "goal": profile.goal,
+        "created_at": profile.created_at,
+    }
