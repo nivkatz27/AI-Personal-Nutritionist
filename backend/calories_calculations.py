@@ -1,4 +1,4 @@
-from models import NutritionProfileInput, WorkoutInput
+from pydantic_models import NutritionProfileInput, WorkoutInput
 
 
 

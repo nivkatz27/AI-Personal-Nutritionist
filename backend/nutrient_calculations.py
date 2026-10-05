@@ -1,5 +1,5 @@
 from calories_calculations import calculate_daily_calorie_target
-from models import NutritionProfileInput
+from pydantic_models import NutritionProfileInput, WorkoutInput
 
 
 PROTEIN_FACTORS = {

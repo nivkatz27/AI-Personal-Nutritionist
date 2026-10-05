@@ -17,16 +17,30 @@ from calories_calculations import (
     calculate_daily_calorie_target,
 )
 
-from models import NutritionProfileInput, WorkoutCaloriesRequest
+from pydantic_models import NutritionProfileInput, NutritionProfileResponse, WorkoutCaloriesRequest, NutritionProfileUpdate
 
 # Create a FastAPI object with a title
 app = FastAPI(title="AI Personal Nutritionist API")
 
 
-@app.post("/nutrition/profile")
-def create_nutrition_profile(profile: NutritionProfileInput):
-    # Convert the validated Pydantic object to a Python dict
-    return profile.model_dump()
+# Receive and validate a nutrition profile, then save it to the database.
+# Return the saved profile including database-generated fields such as ID and creation time.
+@app.post("/nutrition/profile", response_model=NutritionProfileResponse)
+def create_nutrition_profile(
+    profile: NutritionProfileInput,
+    db: Session = Depends(get_db),
+):
+    # We use model_dump() to convert the Pydantic model to a dictionary for the ORM constructor.
+    # ** - Unpack the dictionary into keyword arguments.
+    db_profile = NutritionProfile(**profile.model_dump())
+    # Add the new profile object to the current database session.
+    db.add(db_profile)
+    # Commit the session to save the new profile to the database.
+    db.commit()
+    # Reload the object from PostgreSQL to get database-generated values
+    # such as the ID and created_at timestamp.
+    db.refresh(db_profile)
+    return db_profile
 
 
 @app.post("/nutrition/bmr")
@@ -63,7 +77,7 @@ def get_daily_goal_calories(profile: NutritionProfileInput):
 
 # Retrieve a nutrition profile from the database using its ID.
 # Return 404 if no profile with that ID exists.
-@app.get("/nutrition/profiles/{profile_id}")
+@app.get("/nutrition/profiles/{profile_id}", response_model=NutritionProfileResponse)
 def get_nutrition_profile(
     profile_id: int,
     db: Session = Depends(get_db),
@@ -89,3 +103,73 @@ def get_nutrition_profile(
         "goal": profile.goal,
         "created_at": profile.created_at,
     }
+
+# Update an existing nutrition profile in the database using its ID.
+# Return 404 if no profile with that ID exists. 
+@app.patch("/nutrition/profiles/{profile_id}", response_model=NutritionProfileResponse)
+def update_nutrition_profile(
+    profile_id: int,
+    profile_update: NutritionProfileUpdate,
+    db: Session = Depends(get_db),
+):
+    profile = db.get(NutritionProfile, profile_id)
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Nutrition profile not found"
+        )
+
+    # Convert the Pydantic model to a dictionary, only from fields that were provided in the request.
+    update_data = profile_update.model_dump(exclude_unset=True)
+
+    # Check the final schedule before changing the profile, using stored values for omitted fields.
+    final_workouts_per_week = update_data.get(
+        "workouts_per_week",
+        profile.workouts_per_week,
+    )
+    final_avg_workout_minutes = update_data.get(
+        "avg_workout_minutes",
+        profile.avg_workout_minutes,
+    )
+    if final_workouts_per_week > 0 and final_avg_workout_minutes <= 0:
+        raise HTTPException(
+            status_code=422,
+            detail="avg_workout_minutes must be greater than 0 when workouts_per_week is greater than 0",
+        )
+    if final_workouts_per_week == 0 and final_avg_workout_minutes > 0:
+        raise HTTPException(
+            status_code=422,
+            detail="avg_workout_minutes must be 0 when workouts_per_week is 0",
+        )
+
+    # Update the fields of the existing profile with the new values. 
+    for field, value in update_data.items():
+        setattr(profile, field, value)
+    # Save the updated profile values to PostgreSQL.
+    db.commit()
+    # Reload the profile from the database to keep the ORM object up to date.
+    db.refresh(profile)
+    # Return the updated profile.
+    return profile
+
+# Delete an existing nutrition profile from the database using its ID.
+# Return 404 if no profile with that ID exists.
+@app.delete("/nutrition/profiles/{profile_id}")
+def delete_nutrition_profile(
+    profile_id: int,
+    db: Session = Depends(get_db),
+):
+    profile = db.get(NutritionProfile, profile_id)
+
+    if profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Nutrition profile not found"
+        )
+
+    # Remove the profile from the current database session.
+    db.delete(profile)
+    # Commit the session to delete the profile from the database.
+    db.commit()
+    return {"message": "Nutrition profile deleted successfully"}
