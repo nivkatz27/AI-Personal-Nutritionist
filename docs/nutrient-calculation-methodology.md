@@ -14,7 +14,9 @@ Protein is calculated from body weight, using a goal-specific default:
 
 `protein_g = round(weight_kg * protein_factor)`
 
-The defaults reflect a practical choice within or near research-informed ranges for resistance-trained adults. The International Society of Sports Nutrition (ISSN) identifies **1.4–2.0 g/kg/day** as sufficient for most exercising people and discusses potentially higher intakes during energy restriction; a review of off-season bodybuilding nutrition suggests **1.6–2.2 g/kg/day**. The specific three goal values above are **our application defaults**, not thresholds uniquely prescribed by these papers. In particular, higher cutting recommendations in some research use *fat-free mass* rather than total body weight; our MVP does not calculate fat-free mass.
+The defaults reflect a practical choice within or near research-informed ranges for resistance-trained adults.
+The International Society of Sports Nutrition (ISSN) identifies **1.4–2.0 g/kg/day** as sufficient for most exercising people and discusses potentially higher intakes during energy restriction; a review of off-season bodybuilding nutrition suggests **1.6–2.2 g/kg/day**.
+The specific three goal values above are **our application defaults**, not thresholds uniquely prescribed by these papers. In particular, higher cutting recommendations in some research use *fat-free mass* rather than total body weight; our MVP does not calculate fat-free mass.
 
 ### 2. Fat: a moderate share of calories
 
@@ -30,7 +32,8 @@ Once protein and fat are allocated, carbohydrates receive the remaining calorie 
 
 `carbohydrate_g = round((daily_calories - protein_g * 4 - fat_g * 9) / 4)`
 
-We use the conventional energy approximations of **4 kcal/g for protein**, **9 kcal/g for fat**, and **4 kcal/g for carbohydrates**. Allocating remaining calories to carbohydrates is also consistent with the off-season bodybuilding nutrition review, which emphasizes sufficient carbohydrate availability for training. Carbohydrate goals therefore respond to the user's total calorie target rather than being fixed at one grams-per-kilogram value. The implementation should reject a profile if the remaining carbohydrate budget is negative rather than silently return a negative target.
+We use the conventional energy approximations of **4 kcal/g for protein**, **9 kcal/g for fat**, and **4 kcal/g for carbohydrates**.
+Allocating remaining calories to carbohydrates is also consistent with the off-season bodybuilding nutrition review, which emphasizes sufficient carbohydrate availability for training. Carbohydrate goals therefore respond to the user's total calorie target rather than being fixed at one grams-per-kilogram value. The implementation should reject a profile if the remaining carbohydrate budget is negative rather than silently return a negative target.
 
 ## Example: bulking
 

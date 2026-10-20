@@ -1,14 +1,13 @@
 from fastapi import FastAPI
 from fastapi import Depends, HTTPException
 
-## SQLAlchemy database session type used by the database dependency.
+# SQLAlchemy database session type used by the database dependency.
 from sqlalchemy.orm import Session
 
 # Import the function that creates a database session for each request.
 from database import get_db
-# Import the orm model NutritionProfile for database operations.
+# Import the ORM model NutritionProfile for database operations.
 from db_models import NutritionProfile
-
 
 from calories_calculations import (
     calculate_bmr,
@@ -18,6 +17,7 @@ from calories_calculations import (
 )
 
 from pydantic_models import NutritionProfileInput, NutritionProfileResponse, WorkoutCaloriesRequest, NutritionProfileUpdate
+from nutrient_calculations import calculate_daily_nutrient_targets
 
 # Create a FastAPI object with a title
 app = FastAPI(title="AI Personal Nutritionist API")
@@ -43,36 +43,53 @@ def create_nutrition_profile(
     return db_profile
 
 
+# Use age, gender, weight, and height from the submitted profile
+# to estimate the user's basal metabolic rate (BMR) in calories per day.
 @app.post("/nutrition/bmr")
 def get_bmr(profile: NutritionProfileInput):
-
     bmr = calculate_bmr(profile)
     return {"bmr": bmr}
 
 
+# Estimate calories burned during a workout using the user's weight,
+# workout duration, workout type, and intensity.
 @app.post("/nutrition/workout-calories")
 def get_workout_calories(payload: WorkoutCaloriesRequest):
     # payload.workout is already a validated WorkoutInput object.
-    estimated_calories = calculate_workout_calories(payload.weight_kg, payload.workout)
+    estimated_calories = calculate_workout_calories(
+        payload.weight_kg,
+        payload.workout
+    )
     return {"estimated_calories": estimated_calories}
 
 
+# Estimate the user's total daily energy expenditure (TDEE).
+# This combines baseline daily activity with estimated workout energy expenditure.
 @app.post("/nutrition/tdee")
 def get_tdee(profile: NutritionProfileInput):
     tdee = calculate_tdee(profile)
     return {"tdee": tdee}
 
 
-@app.get("/")  # Handle GET requests to the root path "/"
+# Provide a simple health check to confirm that the API is running and responding.
+@app.get("/")
 def read_root():
     return {"message": "API is running"}
 
+
+# Calculate the user's daily calorie target based on their goal:
+# maintenance, bulking, or cutting.
 @app.post("/nutrition/daily-goal-calories")
 def get_daily_goal_calories(profile: NutritionProfileInput):
-
     daily_goal_calories = calculate_daily_calorie_target(profile)
-
     return {"daily_goal_calories": daily_goal_calories}
+
+
+# Calculate the user's daily calorie and macronutrient targets.
+# Returns recommended protein, fat, and carbohydrate intake in grams.
+@app.post("/nutrition/daily-nutrient-targets")
+def get_daily_nutrient_targets(profile: NutritionProfileInput):
+    return calculate_daily_nutrient_targets(profile)
 
 
 # Retrieve a nutrition profile from the database using its ID.
