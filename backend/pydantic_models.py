@@ -1,4 +1,5 @@
 from datetime import datetime
+from math import isfinite
 from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator, ConfigDict
@@ -126,3 +127,41 @@ class NutritionProfileResponse(BaseModel):
     daily_activity: Literal["sedentary", "lightly_active", "active", "very_active"]
     goal: Literal["maintain", "bulk", "cut"]
     created_at: datetime  
+
+# Represents a single food item provided by the user.
+# Nutrition values will be fetched later from an external nutrition API.
+class MealItemInput(BaseModel):
+    food_name: str
+    quantity_g: float
+
+    # Ensure the food name is not empty or only whitespace.
+    @field_validator("food_name")
+    @classmethod
+    def validate_food_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("food_name cannot be empty")
+        return value
+
+    # Ensure the quantity is a positive number.
+    @field_validator("quantity_g")
+    @classmethod
+    def validate_quantity_g(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("quantity_g must be finite")
+        if value <= 0:
+            raise ValueError("quantity_g must be greater than 0")
+        return value
+
+
+# Represents the request body for creating a meal.
+# A meal contains one or more food items entered by the user.
+class MealCreate(BaseModel):
+    items: list[MealItemInput]
+
+    # Validate that the meal is not empty.
+    @field_validator("items")
+    @classmethod
+    def validate_items(cls, value: list[MealItemInput]) -> list[MealItemInput]:
+        if not value:
+            raise ValueError("items cannot be empty")
+        return value
